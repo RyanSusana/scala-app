@@ -1,7 +1,6 @@
 steps:
   - name: 'gcr.io/cloud-builders/mvn'
     args: ['clean', 'verify']
-    dir: 'function/dir/from/repo/root'
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['functions', 'deploy', 'scala-app', '--trigger-http', '--runtime', 'java11', '--entry-point', 'com.ryansusana.scala.Main']
     dir: 'function/dir/from/repo/root'
