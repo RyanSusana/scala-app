@@ -58,9 +58,19 @@ class Main extends HttpFunction {
       .max { (s1: Sentence, s2: Sentence) => s1.getSentiment.getMagnitude compareTo s2.getSentiment.getMagnitude }
       .getText.getContent
 
+    val mostHappySentence = sentiment.getSentencesList
+      .asScala
+      .max { (s1: Sentence, s2: Sentence) => s1.getSentiment.getScore compareTo s2.getSentiment.getScore }
+      .getText.getContent
+
+    val score = sentiment.getDocumentSentiment.getScore
+
+    val toneOfText = if (score > 0.2) "positive" else if (score <= 0.2) "negative" else "neutral"
     s"""
        |File Name: $fileName
        |Most impactful sentence: $mostImpactfulSentence
+       |The general tone of the text is $toneOfText.
+       |Language: ${sentiment.getLanguage}
     """.stripMargin
 
   }
