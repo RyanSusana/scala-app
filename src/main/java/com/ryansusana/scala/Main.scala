@@ -20,24 +20,18 @@ class Main extends HttpFunction {
 
     val writer = response.getWriter
 
-    val filenames =
-      if (contentType contains "multipart")
-        request.getParts.entrySet().stream()
-          .map { e => e.getKey } collect Collectors.joining(",")
-      else
-        "none"
-
-
     if (!(contentType contains "multipart") || request.getParts.isEmpty) {
       writer.write("No files provided")
     } else {
 
       // Perform sentiment analysis
       try {
-        val details = request.getParts.asScala.values.map(partToDetail).mkString("\n---\n")
-        writer.write(details)
+        val details = request.getParts.asScala.values.map(partToDetail).mkString("\n---\n");
+        writer.write(details);
       } catch {
-        case e: Exception => writer.write(e.getMessage)
+        case e: Exception => {
+          e.printStackTrace(); writer.write(e.getMessage)
+        };
       }
 
 
