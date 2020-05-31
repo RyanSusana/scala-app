@@ -68,7 +68,7 @@ class Main extends HttpFunction {
 
 
     val x = sentiment.getSentencesList.stream()
-      .map { s => s"(Score: ${s.getSentiment.getScore}, Magnitude: ${s.getSentiment.getScore}) ${s.getText.getContent}" }
+      .map { s => s"(Score: ${s.getSentiment.getScore}, Magnitude: ${s.getSentiment.getMagnitude}) ${s.getText.getContent}" }
       .collect(Collectors.joining("\n"))
 
     s"""
@@ -77,8 +77,9 @@ class Main extends HttpFunction {
        |The general tone of the text is $toneOfText.
        |Language: ${sentiment.getLanguage}
        |
+       |$x
        |
-    """.stripMargin + x
+    """.stripMargin
 
   }
 }
