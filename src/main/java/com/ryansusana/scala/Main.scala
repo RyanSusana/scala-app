@@ -33,8 +33,13 @@ class Main extends HttpFunction {
     } else {
 
       // Perform sentiment analysis
-      val details = request.getParts.asScala.values.map(partToDetail).mkString("\n---\n")
-      writer.write(details)
+      try
+        val details = request.getParts.asScala.values.map(partToDetail).mkString("\n---\n")
+        writer.write(details)
+      catch {
+        case e: Exception => writer.write(e.getMessage)
+      }
+
 
     }
   }
@@ -71,6 +76,8 @@ class Main extends HttpFunction {
        |Most impactful sentence: $mostImpactfulSentence
        |The general tone of the text is $toneOfText.
        |Language: ${sentiment.getLanguage}
+       |
+       |
     """.stripMargin
 
   }
