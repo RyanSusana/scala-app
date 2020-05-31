@@ -33,10 +33,10 @@ class Main extends HttpFunction {
     } else {
 
       // Perform sentiment analysis
-      try
+      try {
         val details = request.getParts.asScala.values.map(partToDetail).mkString("\n---\n")
         writer.write(details)
-      catch {
+      } catch {
         case e: Exception => writer.write(e.getMessage)
       }
 
