@@ -71,6 +71,12 @@ class Main extends HttpFunction {
     val score = sentiment.getDocumentSentiment.getScore
 
     val toneOfText = if (score > 0.2) "positive" else if (score <= 0.2) "negative" else "neutral"
+
+
+    val x = sentiment.getSentencesList.stream()
+      .map { s => s"(Score: ${s.getSentiment.getScore}, Magnitude: ${s.getSentiment.getScore}) ${s.getText.getContent}" }
+      .collect(Collectors.joining("\n"))
+
     s"""
        |File Name: $fileName
        |Most impactful sentence: $mostImpactfulSentence
@@ -78,7 +84,7 @@ class Main extends HttpFunction {
        |Language: ${sentiment.getLanguage}
        |
        |
-    """.stripMargin
+    """.stripMargin + x
 
   }
 }
