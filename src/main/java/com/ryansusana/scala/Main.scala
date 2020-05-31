@@ -4,10 +4,10 @@ import java.util.stream.Collectors
 
 import com.google.cloud.functions.{HttpFunction, HttpRequest, HttpResponse}
 import com.google.cloud.language.v1beta2.Document.Type
-import com.google.cloud.language.v1beta2.{Document, LanguageServiceClient}
+import com.google.cloud.language.v1beta2.{Document, LanguageServiceClient, Sentence}
 
-import scala.jdk.CollectionConverters._
 import scala.io.Source
+import scala.jdk.CollectionConverters._
 
 class Main extends HttpFunction {
   val language: LanguageServiceClient = LanguageServiceClient.create
@@ -48,14 +48,14 @@ class Main extends HttpFunction {
   }
 
 
-
   def detailText(fileName: String, input: String): String = {
     val doc = Document.newBuilder.setContent(input).setType(Type.PLAIN_TEXT).build
 
     val sentiment = language.analyzeSentiment(doc)
 
-    val mostImpactfulSentence = sentiment.getSentencesList.asScala
-      .max { (s1, s2) => s1.getSentiment.getMagnitude compareTo s2.getSentiment.getMagnitude }
+    val mostImpactfulSentence = sentiment.getSentencesList
+      .asScala
+      .max { (s1: Sentence, s2: Sentence) => s1.getSentiment.getMagnitude compareTo s2.getSentiment.getMagnitude }
       .getText.getContent
 
     s"""
