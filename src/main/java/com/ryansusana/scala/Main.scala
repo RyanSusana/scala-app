@@ -6,7 +6,7 @@ import com.google.cloud.functions.{HttpFunction, HttpRequest, HttpResponse}
 import com.google.cloud.language.v1beta2.Document.Type
 import com.google.cloud.language.v1beta2.{Document, LanguageServiceClient}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.io.Source
 
 class Main extends HttpFunction {
