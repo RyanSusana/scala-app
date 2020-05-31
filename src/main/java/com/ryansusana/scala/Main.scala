@@ -12,6 +12,6 @@ class Main extends HttpFunction {
       .stream() map { e => e.getKey } collect Collectors.joining(",")
 
     val writer = response.getWriter
-    writer.write(s"$filenames")
+    writer.write(s"Files: $filenames")
   }
 }
