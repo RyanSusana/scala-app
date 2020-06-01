@@ -5,6 +5,8 @@ import java.util.stream.Collectors
 import com.google.cloud.functions.{HttpFunction, HttpRequest, HttpResponse}
 import com.google.cloud.language.v1beta2.Document.Type
 import com.google.cloud.language.v1beta2.{Document, LanguageServiceClient, Sentence}
+import com.itextpdf.text.pdf.PdfReader
+import com.itextpdf.text.pdf.parser.PdfTextExtractor
 
 import scala.io.Source
 import scala.jdk.CollectionConverters._
@@ -30,12 +32,29 @@ class Main extends HttpFunction {
         writer.write(details);
       } catch {
         case e: Exception => {
-          e.printStackTrace(); writer.write(e.getMessage)
+          e.printStackTrace();
+          writer.write(e.getMessage)
         };
       }
 
 
     }
+  }
+
+  def pdfToString() = {
+
+    val reader = new PdfReader("c:/temp/test.pdf")
+
+    val r1 = 0 until 10
+    val r2 = r1.start until r1.end by r1.step + 1
+
+    def r5 = (1 to 5).map { e:Int => None }
+
+
+
+
+    val page = PdfTextExtractor.getTextFromPage(reader, 0)
+
   }
 
   def partToDetail(part: HttpRequest.HttpPart): String = {
