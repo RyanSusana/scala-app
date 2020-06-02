@@ -17,27 +17,27 @@ class Main extends HttpFunction {
 
 
   def service(request: HttpRequest, response: HttpResponse): Unit = {
+    val (status, message) = describeFiles(request)
+    response.setStatusCode(status)
+    response.getWriter.write(message)
+  }
+
+  def describeFiles(request: HttpRequest): (Int, String) = {
     val contentType = request.getContentType.orElse("application/json")
 
-    val writer = response.getWriter
     if (!(contentType contains "multipart") || request.getParts.isEmpty) {
-      writer.write("No files provided")
-    } else {
-      // Perform sentiment analysis
-      try {
-        val details = request.getParts.asScala.values
-
-          .map(toContentDetails)
-          .mkString("\n---\n");
-        writer.write(details);
-      } catch {
-        case e: Exception => {
-
-          e.printStackTrace();
-          response.setStatusCode(500);
-          writer.write(e.getMessage)
-        };
-      }
+      (400, "No files provided")
+    } else if (request.getParts.values.asScala.map(p => p.getContentLength).sum > 1024 * 500) {
+      (400, "Total file size can't be more than 500kb")
+    } else try {
+      (200, request.getParts.asScala.values
+        .map(toContentDetails)
+        .mkString("\n---\n"))
+    } catch {
+      case e: Exception => {
+        e.printStackTrace();
+        (500, e.getMessage)
+      };
     }
   }
 
@@ -47,10 +47,8 @@ class Main extends HttpFunction {
     val contentType = "([A-Za-z]+)/(.+)".r
     part.getContentType.orElse("none/none") match {
       case contentType(_, "pdf") => pdf
-      case contentType("text", _) => textFile
-      case contentType(_, "text") => textFile
+      case contentType("text", _) | contentType(_, "text") => textFile
       case contentType(_, "msword" | "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
-
       case _ => throw new IllegalArgumentException(s"${part.getContentType.orElse("content type")} not allowed")
     }
   }
