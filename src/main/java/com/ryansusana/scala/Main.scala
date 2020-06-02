@@ -10,7 +10,7 @@ import scala.io.Source
 import scala.jdk.CollectionConverters._
 
 class Main extends HttpFunction {
-  val language: LanguageServiceClient = LanguageServiceClient.create
+
 
   def service(request: HttpRequest, response: HttpResponse): Unit = {
     val contentType = request.getContentType.orElse("application/json")
@@ -77,6 +77,8 @@ class Main extends HttpFunction {
     def most(f: (Sentence, Sentence) => Int)(sentences: Iterable[Sentence]): String =
       sentences.max { (s1, s2) => f(s1, s2) }.getText.getContent
 
+    val language: LanguageServiceClient = LanguageServiceClient.create
+
     val doc = Document.newBuilder.setContent(input).setType(Type.PLAIN_TEXT).build
     val sentiment = language.analyzeSentiment(doc)
 
@@ -91,11 +93,6 @@ class Main extends HttpFunction {
 
     val toneOfText = if (score > 0.2) "positive" else if (score <= 0.2) "negative" else "neutral"
 
-
-    val x = sentences
-      .map { s => s"(Score: ${s.getSentiment.getScore}, Magnitude: ${s.getSentiment.getMagnitude}) ${s.getText.getContent}" }
-      .mkString
-
     s"""
        |File Name: $fileName
        |Most impactful sentence: $mostImpactfulSentence
@@ -103,10 +100,6 @@ class Main extends HttpFunction {
        |Most sad sentence: $mostSadSentence
        |The general tone of the text is $toneOfText.
        |Language: ${sentiment.getLanguage}
-       |
-       |Sentences:
-       |$x
-       |
     """.stripMargin
 
   }
