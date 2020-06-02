@@ -48,7 +48,7 @@ class Main extends HttpFunction {
       case contentType(_, "pdf") => pdf
       case contentType("text", _) => textFile
       case contentType(_, "text") => textFile
-      case contentType(_, "msword" || "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
+      case contentType(_, "msword" | "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
       case _ => throw new IllegalArgumentException(s"${part.getContentType.orElse("content type")} not allowed")
     }
   }
