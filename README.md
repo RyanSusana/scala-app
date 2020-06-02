@@ -8,4 +8,4 @@ In my last week picking up Scala, I decided to build an application that runs on
 - The most negative sentence
 - The general tone of the document
 
-This service is hosted on Google Cloud, feel free to check out my pipeline
+This service is hosted on Google Cloud, feel free to check out my pipeline in the `cloudbuild.yaml` file
