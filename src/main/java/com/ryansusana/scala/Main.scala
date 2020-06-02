@@ -50,11 +50,10 @@ class Main extends HttpFunction {
     val reader = new PdfReader(part.getInputStream)
 
     (1 to reader.getNumberOfPages)
-      .map { e => PdfTextExtractor.getTextFromPage(reader, e) }
-      .sortBy("Abstract".r.findAllIn)
-      .sortBy("Conclu".r.findAllIn)
-      .sortBy("Intro".r.findAllIn)
-      .find
+      .map {
+        PdfTextExtractor.getTextFromPage(reader, _)
+      }
+      .head
   }
 
   def textFile(part: HttpRequest.HttpPart): String =
