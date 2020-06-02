@@ -1,7 +1,5 @@
 package com.ryansusana.scala
 
-import java.util.stream.Collectors
-
 import com.google.cloud.functions.{HttpFunction, HttpRequest, HttpResponse}
 import com.google.cloud.language.v1beta2.Document.Type
 import com.google.cloud.language.v1beta2.{Document, LanguageServiceClient, Sentence}
@@ -15,87 +13,98 @@ class Main extends HttpFunction {
   val language: LanguageServiceClient = LanguageServiceClient.create
 
   def service(request: HttpRequest, response: HttpResponse): Unit = {
-
-    // Request.getParts is a Map<String, Part>
-
     val contentType = request.getContentType.orElse("application/json")
 
     val writer = response.getWriter
-
     if (!(contentType contains "multipart") || request.getParts.isEmpty) {
       writer.write("No files provided")
     } else {
-
       // Perform sentiment analysis
       try {
-        val details = request.getParts.asScala.values.map(partToDetail).mkString("\n---\n");
+        val details = request.getParts.asScala.values
+          .map(toContentDetails)
+          .mkString("\n---\n");
         writer.write(details);
       } catch {
         case e: Exception => {
+
           e.printStackTrace();
           writer.write(e.getMessage)
         };
       }
-
-
     }
   }
 
-  def pdfToString() = {
+  def toContentDetails(p: HttpRequest.HttpPart): String = partToDetail(fileType(p))(p)
 
-    val reader = new PdfReader("c:/temp/test.pdf")
-
-    val r1 = 0 until 10
-    val r2 = r1.start until r1.end by r1.step + 1
-
-    def r5 = (1 to 5).map { e:Int => None }
-
-
-
-
-    val page = PdfTextExtractor.getTextFromPage(reader, 0)
-
+  def fileType(part: HttpRequest.HttpPart): HttpRequest.HttpPart => String = {
+    part.getContentType.orElse("none/none").split("/") match {
+      case "pdf" => pdf
+      case "text" => textFile
+    }
   }
 
-  def partToDetail(part: HttpRequest.HttpPart): String = {
+  def pdf(part: HttpRequest.HttpPart): String = {
+    val reader = new PdfReader(part.getInputStream)
 
-    val source = Source.fromInputStream(part.getInputStream).mkString
+    (1 to reader.getNumberOfPages)
+      .map { e => PdfTextExtractor.getTextFromPage(reader, e) }
+      .sortBy("Abstract".r.findAllIn)
+      .sortBy("Conclu".r.findAllIn)
+      .sortBy("Intro".r.findAllIn)
+      .find
+  }
+
+  def textFile(part: HttpRequest.HttpPart): String =
+    Source.fromInputStream(part.getInputStream).mkString
 
 
-    detailText(part.getFileName.orElse("unknown"), source)
+  def partToDetail(getString: HttpRequest.HttpPart => String)(part: HttpRequest.HttpPart): String = {
+    detailText(part.getFileName.orElse("unknown"), getString(part))
   }
 
 
   def detailText(fileName: String, input: String): String = {
-    val doc = Document.newBuilder.setContent(input).setType(Type.PLAIN_TEXT).build
+    def happy(s1: Sentence, s2: Sentence) =
+      s1.getSentiment.getScore compareTo s2.getSentiment.getScore
 
+    def sad(s1: Sentence, s2: Sentence) =
+      s2.getSentiment.getScore compareTo s1.getSentiment.getScore
+
+    def magnitude(s1: Sentence, s2: Sentence) =
+      s1.getSentiment.getMagnitude compareTo s2.getSentiment.getMagnitude
+
+    def most(f: (Sentence, Sentence) => Int)(sentences: Iterable[Sentence]): String =
+      sentences.max { (s1, s2) => f(s1, s2) }.getText.getContent
+
+    val doc = Document.newBuilder.setContent(input).setType(Type.PLAIN_TEXT).build
     val sentiment = language.analyzeSentiment(doc)
 
-    val mostImpactfulSentence = sentiment.getSentencesList
+    val sentences = sentiment.getSentencesList
       .asScala
-      .max { (s1: Sentence, s2: Sentence) => s1.getSentiment.getMagnitude compareTo s2.getSentiment.getMagnitude }
-      .getText.getContent
 
-    val mostHappySentence = sentiment.getSentencesList
-      .asScala
-      .max { (s1: Sentence, s2: Sentence) => s1.getSentiment.getScore compareTo s2.getSentiment.getScore }
-      .getText.getContent
+    val mostImpactfulSentence = most(magnitude)(sentences)
+    val mostHappySentence = most(happy)(sentences)
+    val mostSadSentence = most(sad)(sentences)
 
     val score = sentiment.getDocumentSentiment.getScore
 
     val toneOfText = if (score > 0.2) "positive" else if (score <= 0.2) "negative" else "neutral"
 
 
-    val x = sentiment.getSentencesList.stream()
+    val x = sentences
       .map { s => s"(Score: ${s.getSentiment.getScore}, Magnitude: ${s.getSentiment.getMagnitude}) ${s.getText.getContent}" }
-      .collect(Collectors.joining("\n"))
+      .mkString
 
     s"""
        |File Name: $fileName
        |Most impactful sentence: $mostImpactfulSentence
+       |Most happy sentence: $mostHappySentence
+       |Most sad sentence: $mostSadSentence
        |The general tone of the text is $toneOfText.
        |Language: ${sentiment.getLanguage}
        |
+       |Sentences:
        |$x
        |
     """.stripMargin
