@@ -5,6 +5,10 @@ import com.google.cloud.language.v1beta2.Document.Type
 import com.google.cloud.language.v1beta2.{Document, LanguageServiceClient, Sentence}
 import com.itextpdf.text.pdf.PdfReader
 import com.itextpdf.text.pdf.parser.PdfTextExtractor
+import org.apache.tika.config.TikaConfig
+import org.apache.tika.metadata.Metadata
+import org.apache.tika.parser.ParseContext
+import org.apache.tika.sax.BodyContentHandler
 
 import scala.io.Source
 import scala.jdk.CollectionConverters._
@@ -44,9 +48,20 @@ class Main extends HttpFunction {
       case contentType(_, "pdf") => pdf
       case contentType("text", _) => textFile
       case contentType(_, "text") => textFile
-      case _ => throw new IllegalArgumentException(s"${part.getContentType} not allowed")
+      case contentType(_, "msword" || "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
+      case _ => throw new IllegalArgumentException(s"${part.getContentType.orElse("content type")} not allowed")
     }
   }
+
+  def tikaParse(part: HttpRequest.HttpPart): String = {
+    val tika = TikaConfig.getDefaultConfig
+
+    val handler = new BodyContentHandler
+    val metadata = new Metadata
+    tika.getParser.parse(part.getInputStream, handler, metadata, new ParseContext)
+    handler.toString
+  }
+
 
   def pdf(part: HttpRequest.HttpPart): String = {
     val reader = new PdfReader(part.getInputStream)
