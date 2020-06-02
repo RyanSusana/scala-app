@@ -42,6 +42,7 @@ class Main extends HttpFunction {
     part.getContentType.orElse("none/none").split("/")(1) match {
       case "pdf" => pdf
       case "text" => textFile
+      case _ => throw new IllegalArgumentException(s"${part.getContentType} not allowed")
     }
   }
 
