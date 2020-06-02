@@ -5,23 +5,26 @@ import com.google.cloud.language.v1beta2.Document.Type
 import com.google.cloud.language.v1beta2.{Document, LanguageServiceClient, Sentence}
 import com.itextpdf.text.pdf.PdfReader
 import com.itextpdf.text.pdf.parser.PdfTextExtractor
-import org.apache.tika.config.TikaConfig
-import org.apache.tika.metadata.Metadata
-import org.apache.tika.parser.ParseContext
-import org.apache.tika.sax.BodyContentHandler
+import org.apache.tika.Tika
 
 import scala.io.Source
 import scala.jdk.CollectionConverters._
 
 class Main extends HttpFunction {
 
-
-  def service(request: HttpRequest, response: HttpResponse): Unit = {
+  /**
+   * Cloud Function interface
+   * Destructures the tuple of #describeFiles(HttpRequest) and returns it in the HttpResponse
+   **/
+  override def service(request: HttpRequest, response: HttpResponse): Unit = {
     val (status, message) = describeFiles(request)
     response.setStatusCode(status)
     response.getWriter.write(message)
   }
 
+  /**
+   * Returns a tuple containing HTTP status code and response message
+   **/
   def describeFiles(request: HttpRequest): (Int, String) = {
     val contentType = request.getContentType.orElse("application/json")
 
@@ -34,35 +37,49 @@ class Main extends HttpFunction {
         .map(toContentDetails)
         .mkString("\n---\n"))
     } catch {
-      case e: Exception => {
-        e.printStackTrace();
+      case e: Exception =>
+        e.printStackTrace()
         (500, e.getMessage)
-      };
     }
   }
 
+  /**
+   * Maps request part to file details
+   **/
   def toContentDetails(p: HttpRequest.HttpPart): String = partToDetail(contentTypeTranslator(p))(p)
 
+  /**
+   * Uses currying to translate file and extract its key details
+   */
+  def partToDetail(getString: HttpRequest.HttpPart => String)(part: HttpRequest.HttpPart): String =
+    extractKeyDetails(part.getFileName.orElse("unknown"), getString(part))
+
+  /**
+   * Returns the proper function for translating a file to text using Regex pattern matching.
+   **/
   def contentTypeTranslator(part: HttpRequest.HttpPart): HttpRequest.HttpPart => String = {
     val contentType = "([A-Za-z]+)/(.+)".r
     part.getContentType.orElse("none/none") match {
-      case contentType(_, "pdf") => pdf
-      case contentType("text", _) | contentType(_, "text") => textFile
+      case contentType(_, "pdf") => pdfParse
+      case contentType("text", _) | contentType(_, "text") => textFileParse
       case contentType(_, "msword" | "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
       case _ => throw new IllegalArgumentException(s"${part.getContentType.orElse("content type")} not allowed")
     }
   }
 
+  /**
+   * Parses a file using Apache Tika.
+   * I believe that the other parse methods can also use Tika, but this was done for example purposes
+   */
   def tikaParse(part: HttpRequest.HttpPart): String = {
-    val tika = TikaConfig.getDefaultConfig
-
-    val handler = new BodyContentHandler
-    val metadata = new Metadata
-    tika.getParser.parse(part.getInputStream, handler, metadata, new ParseContext)
-    handler.toString
+    val tika = new Tika
+    tika.parseToString(part.getInputStream)
   }
 
-  def pdf(part: HttpRequest.HttpPart): String = {
+  /**
+   * Parses a file using iText
+   */
+  def pdfParse(part: HttpRequest.HttpPart): String = {
     val reader = new PdfReader(part.getInputStream)
 
     (1 to reader.getNumberOfPages)
@@ -70,15 +87,16 @@ class Main extends HttpFunction {
       .mkString
   }
 
-  def textFile(part: HttpRequest.HttpPart): String =
+  /**
+   * Parses a file using Scala standard library
+   */
+  def textFileParse(part: HttpRequest.HttpPart): String =
     Source.fromInputStream(part.getInputStream).mkString
 
-
-  def partToDetail(getString: HttpRequest.HttpPart => String)(part: HttpRequest.HttpPart): String =
-    detailText(part.getFileName.orElse("unknown"), getString(part))
-
-
-  def detailText(fileName: String, input: String): String = {
+  /**
+   * Uses Google Cloud Natural Language API to perform sentiment analysis and extract key file details
+   **/
+  def extractKeyDetails(fileName: String, input: String): String = {
     def happy(s1: Sentence, s2: Sentence) =
       s1.getSentiment.getScore compareTo s2.getSentiment.getScore
 
