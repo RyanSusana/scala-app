@@ -29,6 +29,7 @@ class Main extends HttpFunction {
         case e: Exception => {
 
           e.printStackTrace();
+          response.setStatusCode(500);
           writer.write(e.getMessage)
         };
       }
@@ -38,7 +39,7 @@ class Main extends HttpFunction {
   def toContentDetails(p: HttpRequest.HttpPart): String = partToDetail(fileType(p))(p)
 
   def fileType(part: HttpRequest.HttpPart): HttpRequest.HttpPart => String = {
-    part.getContentType.orElse("none/none").split("/") match {
+    part.getContentType.orElse("none/none").split("/")(1) match {
       case "pdf" => pdf
       case "text" => textFile
     }
