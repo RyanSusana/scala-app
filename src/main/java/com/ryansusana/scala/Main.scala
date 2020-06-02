@@ -39,9 +39,11 @@ class Main extends HttpFunction {
   def toContentDetails(p: HttpRequest.HttpPart): String = partToDetail(fileType(p))(p)
 
   def fileType(part: HttpRequest.HttpPart): HttpRequest.HttpPart => String = {
-    part.getContentType.orElse("none/none").split("/")(1) match {
-      case "pdf" => pdf
-      case "text" => textFile
+    val contentType = "([A-Za-z]+)/([A-Za-z]+)".r
+    part.getContentType.orElse("none/none") match {
+      case contentType(_, "pdf") => pdf
+      case contentType("text", _) => textFile
+      case contentType(_, "text") => textFile
       case _ => throw new IllegalArgumentException(s"${part.getContentType} not allowed")
     }
   }
@@ -58,9 +60,8 @@ class Main extends HttpFunction {
     Source.fromInputStream(part.getInputStream).mkString
 
 
-  def partToDetail(getString: HttpRequest.HttpPart => String)(part: HttpRequest.HttpPart): String = {
+  def partToDetail(getString: HttpRequest.HttpPart => String)(part: HttpRequest.HttpPart): String =
     detailText(part.getFileName.orElse("unknown"), getString(part))
-  }
 
 
   def detailText(fileName: String, input: String): String = {
