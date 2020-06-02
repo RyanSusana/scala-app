@@ -44,13 +44,13 @@ class Main extends HttpFunction {
   def toContentDetails(p: HttpRequest.HttpPart): String = partToDetail(contentTypeTranslator(p))(p)
 
   def contentTypeTranslator(part: HttpRequest.HttpPart): HttpRequest.HttpPart => String = {
-    val contentType = "([A-Za-z]+)/([A-Za-z]+)".r
+    val contentType = "([A-Za-z]+)/(.+)".r
     part.getContentType.orElse("none/none") match {
       case contentType(_, "pdf") => pdf
       case contentType("text", _) => textFile
       case contentType(_, "text") => textFile
-      case contentType(_, "msword") | contentType(_, "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
-      case contentType(_, "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
+      case contentType(_, "msword" | "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
+
       case _ => throw new IllegalArgumentException(s"${part.getContentType.orElse("content type")} not allowed")
     }
   }
