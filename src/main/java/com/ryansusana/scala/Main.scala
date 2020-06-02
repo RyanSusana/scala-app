@@ -26,6 +26,7 @@ class Main extends HttpFunction {
       // Perform sentiment analysis
       try {
         val details = request.getParts.asScala.values
+
           .map(toContentDetails)
           .mkString("\n---\n");
         writer.write(details);
@@ -40,15 +41,15 @@ class Main extends HttpFunction {
     }
   }
 
-  def toContentDetails(p: HttpRequest.HttpPart): String = partToDetail(fileType(p))(p)
+  def toContentDetails(p: HttpRequest.HttpPart): String = partToDetail(contentTypeTranslator(p))(p)
 
-  def fileType(part: HttpRequest.HttpPart): HttpRequest.HttpPart => String = {
+  def contentTypeTranslator(part: HttpRequest.HttpPart): HttpRequest.HttpPart => String = {
     val contentType = "([A-Za-z]+)/([A-Za-z]+)".r
     part.getContentType.orElse("none/none") match {
       case contentType(_, "pdf") => pdf
       case contentType("text", _) => textFile
       case contentType(_, "text") => textFile
-      case contentType(_, "msword" | "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
+      case contentType(_, "msword") | contentType(_, "vnd.openxmlformats-officedocument.wordprocessingml.document") => tikaParse
       case _ => throw new IllegalArgumentException(s"${part.getContentType.orElse("content type")} not allowed")
     }
   }
@@ -61,7 +62,6 @@ class Main extends HttpFunction {
     tika.getParser.parse(part.getInputStream, handler, metadata, new ParseContext)
     handler.toString
   }
-
 
   def pdf(part: HttpRequest.HttpPart): String = {
     val reader = new PdfReader(part.getInputStream)
